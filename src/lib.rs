@@ -27,7 +27,7 @@ lazy_static! {
         b"21888242871839275222246405745257275088548364400416034343698204186575808495617",10
     )
         .unwrap();
-    static ref B8: Point = Point {
+    pub static ref B8: Point = Point {
         x: Fr::from_str(
                "5299619240641551281634865583518297030282874472190772894086521144482721001553",
            )
@@ -53,13 +53,12 @@ lazy_static! {
 }
 
 #[allow(non_snake_case)]
-pub fn sign_ecdsa(msg: BigInt, key: BigInt) -> Result<Signature, String> {
+pub fn sign_ecdsa(msg: Vec<u8>, key: BigInt) -> Result<Signature, String> {
     // Convert the message and key to byte arrays
-    let (_, msg_bytes) = msg.to_bytes_le();
     let (_, key_bytes) = key.to_bytes_le();
 
     // Hash the message bytes
-    let h: Vec<u8> = blh(&msg_bytes);
+    let h: Vec<u8> = blh(&msg);
 
     // Concatenate key bytes and message hash to form the preimage for k
     let k_preimage = concatenate_arrays(&key_bytes, &h);
@@ -111,7 +110,8 @@ pub fn sign_ecdsa(msg: BigInt, key: BigInt) -> Result<Signature, String> {
 #[allow(non_snake_case)]
 pub fn get_eff_ecdsa_args(msg: BigInt, sig: Signature) -> (Point, Point) {
     // Compute the hash of the message as a scalar
-    let msg_hash = get_msg_hash(msg).unwrap();
+    let (_, msg_bytes) = msg.to_bytes_le();
+    let msg_hash = get_msg_hash(msg_bytes).unwrap();
 
     // Recover r from the signature's R point x-coordinate, reduced modulo the subgroup order
     let r = modulus(
@@ -132,7 +132,7 @@ pub fn get_eff_ecdsa_args(msg: BigInt, sig: Signature) -> (Point, Point) {
     (T, U)
 }
 
-pub fn verify_ecdsa(msg: BigInt, sig: Signature, pk: Point) -> bool {
+pub fn verify_ecdsa(msg: Vec<u8>, sig: Signature, pk: Point) -> bool {
     let msg_hash = get_msg_hash(msg).unwrap();
 
     let s_inv = match sig.s.modinv(&SUBORDER) {
@@ -179,8 +179,16 @@ fn blh(b: &[u8]) -> Vec<u8> {
     let hash = blake_hash::Blake512::digest(b);
     hash.to_vec()
 }
-fn get_msg_hash(msg: BigInt) -> Result<BigInt, String> {
-    let msg_hash = POSEIDON.hash(vec![Fr::from_str(&msg.to_string()).unwrap()])?;
+fn get_msg_hash(msg_bytes: Vec<u8>) -> Result<BigInt, String> {
+    // let msg_bytes_fr = msg_bytes
+    //     .into_iter()
+    //     .map(|x| Fr::from_str(&x.to_string()).unwrap())
+    //     .collect::<Vec<Fr>>();
+
+    let msg_big = BigInt::from_bytes_le(Sign::Plus, &msg_bytes);
+
+    let msg_hash = POSEIDON.hash(vec![Fr::from_str(&msg_big.to_string()).unwrap()])?;
+
     let msg_hash_big = BigInt::parse_bytes(to_hex(&msg_hash).as_bytes(), 16).unwrap();
     let msg_hash = modulus(&msg_hash_big, &SUBORDER);
     Ok(msg_hash)
