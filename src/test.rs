@@ -10,11 +10,12 @@ use num_bigint::RandBigInt;
 fn test_new_key_sign_verify_0_ecdsa() {
     let sk = new_ecdsa_key();
     let pk = B8.mul_scalar(&sk);
-    let msg = BigInt::parse_bytes(b"1234567890123456789012345690", 10).unwrap();
-    let (_, msg_bytes) = msg.to_bytes_le();
-    println!("msg bytes {:?}",msg_bytes);
-    let sig = sign_ecdsa(msg_bytes.clone(), sk).unwrap();
-    verify_ecdsa(msg_bytes, sig.clone(), pk.clone());
+    let test_msg: Vec<u8> = [
+        57, 48, 70, 53, 66, 49, 65, 56, 57, 54, 53, 50, 56, 51, 54, 51, 53, 55, 54, 0,
+    ]
+    .to_vec();
+    let sig = sign_ecdsa(test_msg.clone(), sk).unwrap();
+    verify_ecdsa(test_msg, sig.clone(), pk.clone());
 }
 
 #[test]
@@ -23,6 +24,7 @@ fn test_new_key_sign_verify_0_eff_ecdsa() {
     let pk = B8.mul_scalar(&sk);
     let msg = BigInt::parse_bytes(b"1234567890123456789012345690", 10).unwrap();
     let (_, msg_bytes) = msg.to_bytes_le();
+
     let sig = sign_ecdsa(msg_bytes, sk).unwrap();
     let (t, u) = get_eff_ecdsa_args(msg.clone(), sig.clone());
     verify_eff_ecdsa(sig, t, u, pk);

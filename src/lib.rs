@@ -179,6 +179,13 @@ fn blh(b: &[u8]) -> Vec<u8> {
     let hash = blake_hash::Blake512::digest(b);
     hash.to_vec()
 }
+#[cfg(feature = "aarch64")]
+fn blh(b: &[u8]) -> Vec<u8> {
+    let mut hash = [0; 64];
+    blake::hash(512, b, &mut hash).unwrap();
+    hash.to_vec()
+}
+
 fn get_msg_hash(msg_bytes: Vec<u8>) -> Result<BigInt, String> {
     // let msg_bytes_fr = msg_bytes
     //     .into_iter()
